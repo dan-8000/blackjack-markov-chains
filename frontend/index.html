@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente Blackjack — Markov</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Asistente de Blackjack</h1>
+  <p class="subtitle">Potenciado por Cadenas de Markov</p>
+</header>
+
+<main>
+
+  <!-- REGLAS -->
+  <section id="config-section">
+    <h2>Configurar Partida</h2>
+    <div class="config-grid">
+
+      <label>N° Mazos
+        <select id="cfg-decks">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="6" selected>6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+
+      <label>Crupier Soft 17
+        <select id="cfg-s17">
+          <option value="stand" selected>Stand (S17)</option>
+          <option value="hit">Hit (H17)</option>
+        </select>
+      </label>
+
+      <label>Doblar
+        <select id="cfg-double">
+          <option value="any" selected>Cualquier par</option>
+          <option value="9_11">9, 10, 11</option>
+          <option value="10_11">10, 11</option>
+        </select>
+      </label>
+
+      <label>Doblar tras Split
+        <select id="cfg-das">
+          <option value="yes" selected>Si</option>
+          <option value="no">No</option>
+        </select>
+      </label>
+
+      <label>Max Splits
+        <select id="cfg-splits">
+          <option value="1">2 manos</option>
+          <option value="2">3 manos</option>
+          <option value="3" selected>4 manos</option>
+        </select>
+      </label>
+
+      <label>Rendicion
+        <select id="cfg-surrender">
+          <option value="late" selected>Tardia</option>
+          <option value="none">Sin rendicion</option>
+        </select>
+      </label>
+
+      <label>Pago Blackjack
+        <select id="cfg-bjpay">
+          <option value="1.5" selected>3:2</option>
+          <option value="1.2">6:5</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="btn-config">Iniciar Sesion</button>
+    <span id="config-status"></span>
+  </section>
+
+  <!-- ZAPATO -->
+  <section id="shoe-section" class="hidden">
+    <h2>Cartas Restantes en el Zapato</h2>
+    <div id="shoe-display" class="shoe-grid"></div>
+    <p class="shoe-total">Total: <span id="shoe-total">0</span> cartas</p>
+  </section>
+
+  <!-- CALCULADORA -->
+  <section id="calc-section" class="hidden">
+    <h2>Calcular Jugada</h2>
+    <div class="calc-inputs">
+      <div class="input-group">
+        <label>Tus cartas <span class="hint">(separadas por coma: 10,A)</span></label>
+        <input type="text" id="input-player" placeholder="10,A">
+        <div class="card-preview" id="player-preview"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Carta visible del Crupier</label>
+        <div class="dealer-input-row">
+          <input type="text" id="input-dealer" placeholder="6" maxlength="3">
+          <div class="quick-btns">
+            <button class="chip-btn" data-card="A">A</button>
+            <button class="chip-btn" data-card="2">2</button>
+            <button class="chip-btn" data-card="3">3</button>
+            <button class="chip-btn" data-card="4">4</button>
+            <button class="chip-btn" data-card="5">5</button>
+            <button class="chip-btn" data-card="6">6</button>
+            <button class="chip-btn" data-card="7">7</button>
+            <button class="chip-btn" data-card="8">8</button>
+            <button class="chip-btn" data-card="9">9</button>
+            <button class="chip-btn" data-card="10">10</button>
+            <button class="chip-btn" data-card="J">J</button>
+            <button class="chip-btn" data-card="Q">Q</button>
+            <button class="chip-btn" data-card="K">K</button>
+          </div>
+        </div>
+        <div class="card-preview" id="dealer-preview"></div>
+      </div>
+    </div>
+
+    <button id="btn-calculate">Calcular Jugada</button>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="results-section" class="hidden">
+    <h2>Resultado</h2>
+
+    <div class="hand-summary">
+      <div class="hand-info">
+        <strong>Tu mano:</strong> <span id="res-player-cards"></span> →
+        Total: <span id="res-player-total"></span>
+        <span id="res-player-soft" class="soft-badge hidden">suave</span>
+        <span id="res-player-bj" class="bj-badge hidden">BLACKJACK</span>
+      </div>
+      <div class="hand-info">
+        <strong>Crupier muestra:</strong> <span id="res-dealer-card"></span>
+      </div>
+    </div>
+
+    <h3>Valor Esperado por Accion</h3>
+    <div id="ev-results" class="ev-grid"></div>
+
+    <h3>Distribucion Final del Crupier</h3>
+    <div id="dealer-dist" class="dist-grid"></div>
+
+    <div class="resolve-box">
+      <h3>Resolver Mano</h3>
+      <label>Cartas que salieron (separadas por coma):
+        <input type="text" id="input-resolve" placeholder="5,Q,8">
+      </label>
+      <button id="btn-resolve">Actualizar Zapato</button>
+      <span id="resolve-status"></span>
+    </div>
+  </section>
+
+  <!-- PIE -->
+  <section id="markov-note" class="note">
+    <p>Toda la logica de probabilidades usa <strong>Cadenas de Markov</strong>.
+    Las transiciones se calculan dinamicamente desde la composicion real del zapato (cartas ya jugadas).</p>
+  </section>
+</main>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
