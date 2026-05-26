@@ -1,225 +1,228 @@
 const API = "/api";
 
-let shoeState = null;
+let estadoZapato = null;
 
-const suits = ["spades", "hearts", "diamonds", "clubs"];
-let suitIndex = 0;
+const palos = ["spades", "hearts", "diamonds", "clubs"];
+let indicePalo = 0;
 
-function nextSuit() {
-  const s = suits[suitIndex % 4];
-  suitIndex++;
-  return s;
+function siguientePalo() {
+  const palo = palos[indicePalo % 4];
+  indicePalo++;
+  return palo;
 }
 
-function suitSymbol(suit) {
-  return { spades: "♠", hearts: "♥", diamonds: "♦", clubs: "♣" }[suit];
+function simboloPalo(palo) {
+  return { spades: "♠", hearts: "♥", diamonds: "♦", clubs: "♣" }[palo];
 }
 
-function suitColor(suit) {
-  return (suit === "hearts" || suit === "diamonds") ? "red" : "black";
+function colorPalo(palo) {
+  return palo === "hearts" || palo === "diamonds" ? "red" : "black";
 }
 
-function rankShort(rank) {
-  const r = rank.trim().toUpperCase();
+function rangoCorto(rango) {
+  const r = rango.trim().toUpperCase();
   if (r === "10") return "10";
   if (r.length > 1) return r.charAt(0);
   return r;
 }
 
-function createCardElement(rank, suit) {
-  const card = document.createElement("div");
-  card.className = "playing-card " + suitColor(suit);
-  const sym = suitSymbol(suit);
-  const rs = rankShort(rank);
+function crearElementoCarta(rango, palo) {
+  const carta = document.createElement("div");
+  carta.className = "playing-card " + colorPalo(palo);
+  const simbolo = simboloPalo(palo);
+  const rs = rangoCorto(rango);
 
-  card.innerHTML = `
-    <div class="corner-top"><span>${rs}</span><span class="suit-icon">${sym}</span></div>
-    <div class="center-suit">${sym}</div>
-    <div class="corner-bot"><span>${rs}</span><span class="suit-icon">${sym}</span></div>
+  carta.innerHTML = `
+    <div class="corner-top"><span>${rs}</span><span class="suit-icon">${simbolo}</span></div>
+    <div class="center-suit">${simbolo}</div>
+    <div class="corner-bot"><span>${rs}</span><span class="suit-icon">${simbolo}</span></div>
   `;
-  return card;
+  return carta;
 }
 
-function renderPlayerCards(cardsStr) {
-  const preview = document.getElementById("player-preview");
-  preview.innerHTML = "";
-  suitIndex = 0;
-  const cards = cardsStr.split(",").map(c => c.trim()).filter(Boolean);
-  cards.forEach(c => {
-    const suit = nextSuit();
-    preview.appendChild(createCardElement(c, suit));
+function mostrarCartasJugador(textoCartas) {
+  const previsualizacion = document.getElementById("player-preview");
+  previsualizacion.innerHTML = "";
+  indicePalo = 0;
+  const cartas = textoCartas.split(",").map(c => c.trim()).filter(Boolean);
+  cartas.forEach(c => {
+    const palo = siguientePalo();
+    previsualizacion.appendChild(crearElementoCarta(c, palo));
   });
 }
 
-function renderDealerCard(cardStr) {
-  const preview = document.getElementById("dealer-preview");
-  preview.innerHTML = "";
-  const c = cardStr.trim();
+function mostrarCartaCrupier(textoCarta) {
+  const previsualizacion = document.getElementById("dealer-preview");
+  previsualizacion.innerHTML = "";
+  const c = textoCarta.trim();
   if (!c) return;
-  preview.appendChild(createCardElement(c, "spades"));
+  previsualizacion.appendChild(crearElementoCarta(c, "spades"));
 }
 
-function renderShoe(data) {
-  if (!data || !data.remaining) return;
-  shoeState = data;
-  const container = document.getElementById("shoe-display");
-  container.innerHTML = "";
-  const order = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-  order.forEach(label => {
-    const cnt = data.by_label[label];
+function mostrarZapato(datos) {
+  if (!datos || !datos.restantes) return;
+  estadoZapato = datos;
+  const contenedor = document.getElementById("shoe-display");
+  contenedor.innerHTML = "";
+  const orden = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+  orden.forEach(etiqueta => {
+    const cantidad = datos.por_etiqueta[etiqueta];
     const div = document.createElement("div");
     div.className = "shoe-card";
-    div.innerHTML = `<span class="label">${label}</span><span class="count">${cnt}</span>`;
-    container.appendChild(div);
+    div.innerHTML = `<span class="label">${etiqueta}</span><span class="count">${cantidad}</span>`;
+    contenedor.appendChild(div);
   });
-  document.getElementById("shoe-total").textContent = data.total_remaining;
+  document.getElementById("shoe-total").textContent = datos.total_restante;
 }
 
-function renderResults(data) {
-  const section = document.getElementById("results-section");
-  section.classList.remove("hidden");
+function mostrarResultados(datos) {
+  const seccion = document.getElementById("results-section");
+  seccion.classList.remove("hidden");
 
-  document.getElementById("res-player-cards").textContent = data.jugador.cartas.join(", ");
-  document.getElementById("res-player-total").textContent = data.jugador.total;
+  document.getElementById("res-player-cards").textContent = datos.jugador.cartas.join(", ");
+  document.getElementById("res-player-total").textContent = datos.jugador.total;
 
-  const softBadge = document.getElementById("res-player-soft");
-  softBadge.classList.toggle("hidden", !data.jugador.es_suave);
+  const insigniaSuave = document.getElementById("res-player-soft");
+  insigniaSuave.classList.toggle("hidden", !datos.jugador.es_suave);
 
-  const bjBadge = document.getElementById("res-player-bj");
-  bjBadge.classList.toggle("hidden", !data.jugador.es_blackjack);
+  const insigniaBJ = document.getElementById("res-player-bj");
+  insigniaBJ.classList.toggle("hidden", !datos.jugador.es_blackjack);
 
-  document.getElementById("res-dealer-card").textContent = data.crupier.carta_visible;
+  document.getElementById("res-dealer-card").textContent = datos.crupier.carta_visible;
 
-  const evGrid = document.getElementById("ev-results");
-  evGrid.innerHTML = "";
-  for (const [action, info] of Object.entries(data.acciones)) {
-    const card = document.createElement("div");
-    card.className = "ev-card";
-    if (info.recomendada) card.classList.add("recommended");
-    const ev = info.valor_esperado;
-    if (ev > 0.001) card.classList.add("ev-positive");
-    else if (ev < -0.001) card.classList.add("ev-negative");
-    else card.classList.add("ev-neutral");
-    card.innerHTML = `
-      <div class="action-name">${action}</div>
-      <div class="action-ev">${ev >= 0 ? "+" : ""}${ev.toFixed(4)}</div>
+  const rejillaEV = document.getElementById("ev-results");
+  rejillaEV.innerHTML = "";
+  for (const [accion, info] of Object.entries(datos.acciones)) {
+    const tarjeta = document.createElement("div");
+    tarjeta.className = "ev-card";
+    if (info.recomendada) tarjeta.classList.add("recommended");
+    const ve = info.valor_esperado;
+    if (ve > 0.001) tarjeta.classList.add("ev-positive");
+    else if (ve < -0.001) tarjeta.classList.add("ev-negative");
+    else tarjeta.classList.add("ev-neutral");
+    tarjeta.innerHTML = `
+      <div class="action-name">${accion}</div>
+      <div class="action-ev">${ve >= 0 ? "+" : ""}${ve.toFixed(4)}</div>
     `;
-    evGrid.appendChild(card);
+    rejillaEV.appendChild(tarjeta);
   }
 
-  const distGrid = document.getElementById("dealer-dist");
-  distGrid.innerHTML = "";
-  const maxPct = Math.max(...Object.values(data.crupier.distribucion_final), 1);
-  for (const [label, pct] of Object.entries(data.crupier.distribucion_final)) {
-    const wrap = document.createElement("div");
-    wrap.className = "dist-bar-wrap";
-    wrap.innerHTML = `
-      <div class="dist-label">${label}</div>
-      <div class="dist-bar" style="width:${Math.max((pct / maxPct) * 100, 2)}%"></div>
-      <div class="dist-pct">${pct.toFixed(1)}%</div>
+  const rejillaDist = document.getElementById("dealer-dist");
+  rejillaDist.innerHTML = "";
+  const maxPorcentaje = Math.max(...Object.values(datos.crupier.distribucion_final), 1);
+  for (const [etiqueta, porcentaje] of Object.entries(datos.crupier.distribucion_final)) {
+    const envoltura = document.createElement("div");
+    envoltura.className = "dist-bar-wrap";
+    envoltura.innerHTML = `
+      <div class="dist-label">${etiqueta}</div>
+      <div class="dist-bar" style="width:${Math.max((porcentaje / maxPorcentaje) * 100, 2)}%"></div>
+      <div class="dist-pct">${porcentaje.toFixed(1)}%</div>
     `;
-    distGrid.appendChild(wrap);
+    rejillaDist.appendChild(envoltura);
   }
 
-  renderShoe(data.zapato);
+  mostrarZapato(datos.zapato);
 }
 
-async function configure() {
-  const payload = {
-    num_decks: parseInt(document.getElementById("cfg-decks").value),
-    dealer_stands_soft_17: document.getElementById("cfg-s17").value === "stand",
-    double_any_two: document.getElementById("cfg-double").value === "any",
-    double_9_10_11_only: document.getElementById("cfg-double").value === "9_11",
-    double_10_11_only: document.getElementById("cfg-double").value === "10_11",
-    double_after_split: document.getElementById("cfg-das").value === "yes",
-    max_splits: parseInt(document.getElementById("cfg-splits").value),
-    late_surrender: document.getElementById("cfg-surrender").value === "late",
-    blackjack_pays: parseFloat(document.getElementById("cfg-bjpay").value),
-    resplit_aces: true,
+async function configurarPartida() {
+  const carga = {
+    cantidad_mazos: parseInt(document.getElementById("cfg-decks").value),
+    crupier_se_planta_suave_17: document.getElementById("cfg-s17").value === "stand",
+    doblar_cualquier_par: document.getElementById("cfg-double").value === "any",
+    doblar_solo_9_10_11: document.getElementById("cfg-double").value === "9_11",
+    doblar_solo_10_11: document.getElementById("cfg-double").value === "10_11",
+    doblar_tras_dividir: document.getElementById("cfg-das").value === "yes",
+    maximas_divisiones: parseInt(document.getElementById("cfg-splits").value),
+    rendicion_tardia: document.getElementById("cfg-surrender").value === "late",
+    pago_blackjack: parseFloat(document.getElementById("cfg-bjpay").value),
+    redividir_ases: true,
   };
 
-  const res = await fetch(API + "/configurar", {
+  const respuesta = await fetch(API + "/configurar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(carga),
   });
-  const data = await res.json();
+  const datos = await respuesta.json();
 
-  if (res.ok) {
+  if (respuesta.ok) {
     document.getElementById("config-status").textContent = "✔ Configurada";
     document.getElementById("config-status").style.color = "var(--green)";
 
     document.getElementById("shoe-section").classList.remove("hidden");
     document.getElementById("calc-section").classList.remove("hidden");
 
-    renderShoe(data.zapato);
+    mostrarZapato(datos.zapato);
   } else {
     document.getElementById("config-status").textContent = "✖ Error";
     document.getElementById("config-status").style.color = "var(--red)";
   }
 }
 
-async function calculate() {
-  const playerCards = document.getElementById("input-player").value;
-  const dealerCard = document.getElementById("input-dealer").value.trim();
+async function calcularJugada() {
+  const cartasJugador = document.getElementById("input-player").value;
+  const cartaCrupier = document.getElementById("input-dealer").value.trim();
 
-  if (!playerCards || !dealerCard) {
+  if (!cartasJugador || !cartaCrupier) {
     alert("Ingresa tus cartas y la carta del crupier.");
     return;
   }
 
-  const res = await fetch(API + "/calcular", {
+  const respuesta = await fetch(API + "/calcular", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ player_cards: playerCards, dealer_upcard: dealerCard }),
+    body: JSON.stringify({
+      cartas_jugador: cartasJugador,
+      carta_visible_crupier: cartaCrupier,
+    }),
   });
-  const data = await res.json();
+  const datos = await respuesta.json();
 
-  if (res.ok) {
-    renderResults(data);
+  if (respuesta.ok) {
+    mostrarResultados(datos);
   } else {
-    alert("Error: " + (data.detail || "Verifica el formato de las cartas"));
+    alert("Error: " + (datos.detail || "Verifica el formato de las cartas"));
   }
 }
 
-async function resolveHand() {
-  const cards = document.getElementById("input-resolve").value;
-  if (!cards.trim()) return;
+async function resolverMano() {
+  const cartas = document.getElementById("input-resolve").value;
+  if (!cartas.trim()) return;
 
-  const res = await fetch(API + "/actualizar", {
+  const respuesta = await fetch(API + "/actualizar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cards_to_remove: cards }),
+    body: JSON.stringify({ cartas_a_remover: cartas }),
   });
-  const data = await res.json();
+  const datos = await respuesta.json();
 
-  if (res.ok) {
+  if (respuesta.ok) {
     document.getElementById("resolve-status").textContent = "✔ Zapato actualizado";
     document.getElementById("resolve-status").style.color = "var(--green)";
-    renderShoe(data.zapato);
+    mostrarZapato(datos.zapato);
   } else {
     document.getElementById("resolve-status").textContent = "✖ Error";
     document.getElementById("resolve-status").style.color = "var(--red)";
   }
 }
 
-document.getElementById("btn-config").addEventListener("click", configure);
-document.getElementById("btn-calculate").addEventListener("click", calculate);
-document.getElementById("btn-resolve").addEventListener("click", resolveHand);
+document.getElementById("btn-config").addEventListener("click", configurarPartida);
+document.getElementById("btn-calculate").addEventListener("click", calcularJugada);
+document.getElementById("btn-resolve").addEventListener("click", resolverMano);
 
 document.getElementById("input-player").addEventListener("input", function () {
-  renderPlayerCards(this.value);
+  mostrarCartasJugador(this.value);
 });
 
 document.getElementById("input-dealer").addEventListener("input", function () {
-  renderDealerCard(this.value);
+  mostrarCartaCrupier(this.value);
 });
 
-document.querySelectorAll(".chip-btn").forEach(btn => {
-  btn.addEventListener("click", function () {
-    const dealerInput = document.getElementById("input-dealer");
-    dealerInput.value = this.dataset.card;
-    renderDealerCard(this.dataset.card);
+document.querySelectorAll(".chip-btn").forEach(boton => {
+  boton.addEventListener("click", function () {
+    const entradaCrupier = document.getElementById("input-dealer");
+    entradaCrupier.value = this.dataset.card;
+    mostrarCartaCrupier(this.dataset.card);
     document.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("sel"));
     this.classList.add("sel");
   });

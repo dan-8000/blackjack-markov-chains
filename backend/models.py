@@ -1,210 +1,234 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
-from copy import deepcopy
 
-CARD_VALUE = {
+VALOR_CARTA = {
     "A": 1, "2": 2, "3": 3, "4": 4, "5": 5,
     "6": 6, "7": 7, "8": 8, "9": 9,
     "10": 10, "J": 10, "Q": 10, "K": 10,
 }
 
-INITIAL_DECK = {
-    1: 4,   # Ace
-    2: 4,   # 2
-    3: 4,   # 3
-    4: 4,   # 4
-    5: 4,   # 5
-    6: 4,   # 6
-    7: 4,   # 7
-    8: 4,   # 8
-    9: 4,   # 9
-    10: 16, # 10, J, Q, K
-}
-
-RANK_DISPLAY = {
-    1: "A", 2: "2", 3: "3", 4: "4", 5: "5",
-    6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "J", 12: "Q", 13: "K",
-}
-
-SUIT_DISPLAY = {
-    "hearts": "♥",
-    "diamonds": "♦",
-    "clubs": "♣",
-    "spades": "♠",
-}
-
-SUIT_COLOR = {
-    "hearts": "red",
-    "diamonds": "red",
-    "clubs": "black",
-    "spades": "black",
+MAZO_INICIAL = {
+    1: 4,
+    2: 4,
+    3: 4,
+    4: 4,
+    5: 4,
+    6: 4,
+    7: 4,
+    8: 4,
+    9: 4,
+    10: 16,
 }
 
 
-def parse_card(s: str) -> int:
-    s = s.strip().upper()
-    if s in ("A", "ACE"):
+def convertir_carta(texto: str) -> int:
+    texto = texto.strip().upper()
+    if texto in ("A", "ACE", "AS"):
         return 1
-    if s in ("J", "JACK"):
+    if texto in ("J", "JACK", "JOTA"):
         return 10
-    if s in ("Q", "QUEEN"):
+    if texto in ("Q", "QUEEN", "REINA"):
         return 10
-    if s in ("K", "KING"):
+    if texto in ("K", "KING", "REY"):
         return 10
     try:
-        v = int(s)
-        if 1 <= v <= 10:
-            return v if v != 1 else 1
-        raise ValueError(f"Valor de carta invalido: {s}")
+        valor = int(texto)
+        if 1 <= valor <= 10:
+            return valor
+        raise ValueError(f"Valor de carta invalido: {texto}")
     except ValueError:
-        raise ValueError(f"Carta invalida: {s}")
+        raise ValueError(f"Carta invalida: {texto}")
 
 
-def card_rank_to_shoe_value(rank: int) -> int:
-    if rank >= 10:
-        return 10
-    return rank
+class Mano:
+    """
+    Representa una mano de blackjack con sus cartas y propiedades derivadas.
 
+    Atributos
+    ---------
+    cartas : List[str]
+        Lista de cartas que componen la mano. Cada carta se representa
+        como string (ej: "A", "10", "K").
+    """
 
-class Hand:
-    def __init__(self, cards: List[str] = None):
-        self.cards: List[str] = cards or []
+    def __init__(self, cartas: List[str] = None):
+        self.cartas: List[str] = cartas or []
 
-    def add_card(self, card: str):
-        self.cards.append(card)
+    def agregar_carta(self, carta: str) -> None:
+        self.cartas.append(carta)
 
-    def _values(self) -> List[int]:
-        return [CARD_VALUE[c.upper()] for c in self.cards]
+    def _valores(self) -> List[int]:
+        return [VALOR_CARTA[c.upper()] for c in self.cartas]
 
-    def _has_ace(self) -> bool:
-        return any(c.upper() == "A" for c in self.cards)
-
-    @property
-    def hard_total(self) -> int:
-        return sum(self._values())
-
-    @property
-    def soft_total(self) -> int:
-        t = self.hard_total
-        if self._has_ace() and t + 10 <= 21:
-            return t + 10
-        return t
+    def _tiene_as(self) -> bool:
+        return any(c.upper() == "A" for c in self.cartas)
 
     @property
-    def best_total(self) -> int:
-        s = self.soft_total
-        if s <= 21:
-            return s
-        return self.hard_total
+    def total_duro(self) -> int:
+        return sum(self._valores())
 
     @property
-    def is_soft(self) -> bool:
-        return self._has_ace() and self.hard_total + 10 <= 21
+    def total_suave(self) -> int:
+        total = self.total_duro
+        if self._tiene_as() and total + 10 <= 21:
+            return total + 10
+        return total
 
     @property
-    def is_bust(self) -> bool:
-        return self.hard_total > 21
+    def mejor_total(self) -> int:
+        suave = self.total_suave
+        if suave <= 21:
+            return suave
+        return self.total_duro
 
     @property
-    def is_blackjack(self) -> bool:
-        return len(self.cards) == 2 and self.soft_total == 21
+    def es_suave(self) -> bool:
+        return self._tiene_as() and self.total_duro + 10 <= 21
 
     @property
-    def is_pair(self) -> bool:
-        if len(self.cards) != 2:
+    def esta_pasado(self) -> bool:
+        return self.total_duro > 21
+
+    @property
+    def es_blackjack(self) -> bool:
+        return len(self.cartas) == 2 and self.total_suave == 21
+
+    @property
+    def es_par(self) -> bool:
+        if len(self.cartas) != 2:
             return False
-        return CARD_VALUE[self.cards[0].upper()] == CARD_VALUE[self.cards[1].upper()]
+        return VALOR_CARTA[self.cartas[0].upper()] == VALOR_CARTA[self.cartas[1].upper()]
 
     @property
-    def pair_rank(self) -> int:
-        if not self.is_pair:
+    def rango_del_par(self) -> int:
+        if not self.es_par:
             return 0
-        return CARD_VALUE[self.cards[0].upper()]
+        return VALOR_CARTA[self.cartas[0].upper()]
 
-    def copy(self) -> "Hand":
-        return Hand(list(self.cards))
+    def copiar(self) -> "Mano":
+        return Mano(list(self.cartas))
 
 
-class Shoe:
-    def __init__(self, num_decks: int = 6):
-        self.num_decks = num_decks
-        self.counts: Dict[int, int] = {}
-        self._reset()
+class Zapato:
+    """
+    Representa el zapato de blackjack (N mazos). Lleva el conteo de
+    cartas restantes por valor numérico y descuenta cartas jugadas.
 
-    def _reset(self):
-        self.counts = {k: v * self.num_decks for k, v in INITIAL_DECK.items()}
+    Atributos
+    ---------
+    cantidad_mazos : int
+        Número de mazos que componen el zapato.
+    conteo : Dict[int, int]
+        Cartas restantes por valor clave: {1: ases, 2: doses, ..., 10: dieces/figuras}.
+    """
+
+    def __init__(self, cantidad_mazos: int = 6):
+        self.cantidad_mazos = cantidad_mazos
+        self.conteo: Dict[int, int] = {}
+        self._reiniciar()
+
+    def _reiniciar(self) -> None:
+        self.conteo = {k: v * self.cantidad_mazos for k, v in MAZO_INICIAL.items()}
 
     @property
-    def total_cards(self) -> int:
-        return sum(self.counts.values())
+    def total_cartas(self) -> int:
+        return sum(self.conteo.values())
 
-    def remove_card_by_value(self, value: int):
-        v = value if value <= 10 else 10
-        if self.counts.get(v, 0) > 0:
-            self.counts[v] -= 1
+    def quitar_carta_por_valor(self, valor: int) -> None:
+        clave = valor if valor <= 10 else 10
+        if self.conteo.get(clave, 0) > 0:
+            self.conteo[clave] -= 1
 
-    def remove_card(self, card_str: str):
-        v = CARD_VALUE[card_str.strip().upper()]
-        self.remove_card_by_value(v)
+    def quitar_carta(self, texto_carta: str) -> None:
+        valor = VALOR_CARTA[texto_carta.strip().upper()]
+        self.quitar_carta_por_valor(valor)
 
-    def remove_cards(self, cards: List[str]):
-        for c in cards:
-            self.remove_card(c)
+    def quitar_cartas(self, cartas: List[str]) -> None:
+        for carta in cartas:
+            self.quitar_carta(carta)
 
-    def probability(self, value: int) -> float:
-        tc = self.total_cards
-        if tc == 0:
+    def probabilidad(self, valor: int) -> float:
+        total = self.total_cartas
+        if total == 0:
             return 0.0
-        return self.counts.get(value, 0) / tc
+        return self.conteo.get(valor, 0) / total
 
-    def copy(self) -> "Shoe":
-        s = Shoe(self.num_decks)
-        s.counts = dict(self.counts)
-        return s
+    def copiar(self) -> "Zapato":
+        zapato = Zapato(self.cantidad_mazos)
+        zapato.conteo = dict(self.conteo)
+        return zapato
 
-    def to_dict(self) -> dict:
+    def a_diccionario(self) -> dict:
         return {
-            "num_decks": self.num_decks,
-            "remaining": dict(self.counts),
-            "total_remaining": self.total_cards,
-            "by_label": {
-                "A": self.counts[1],
-                "2": self.counts[2],
-                "3": self.counts[3],
-                "4": self.counts[4],
-                "5": self.counts[5],
-                "6": self.counts[6],
-                "7": self.counts[7],
-                "8": self.counts[8],
-                "9": self.counts[9],
-                "10": self.counts[10],
-            }
+            "cantidad_mazos": self.cantidad_mazos,
+            "restantes": dict(self.conteo),
+            "total_restante": self.total_cartas,
+            "por_etiqueta": {
+                "A": self.conteo[1],
+                "2": self.conteo[2],
+                "3": self.conteo[3],
+                "4": self.conteo[4],
+                "5": self.conteo[5],
+                "6": self.conteo[6],
+                "7": self.conteo[7],
+                "8": self.conteo[8],
+                "9": self.conteo[9],
+                "10": self.conteo[10],
+            },
         }
 
 
 @dataclass
-class Rules:
-    num_decks: int = 6
-    dealer_stands_soft_17: bool = True
-    double_any_two: bool = True
-    double_9_10_11_only: bool = False
-    double_10_11_only: bool = False
-    double_after_split: bool = True
-    max_splits: int = 3
-    late_surrender: bool = True
-    blackjack_pays: float = 1.5
-    resplit_aces: bool = True
-    hit_split_aces: bool = False
+class Reglas:
+    """
+    Configuración de reglas de la mesa de blackjack.
 
-    def can_double(self, total: int) -> bool:
-        if self.double_10_11_only:
+    Atributos
+    ---------
+    cantidad_mazos : int
+        Número de mazos en el zapato.
+    crupier_se_planta_suave_17 : bool
+        True = S17 (el crupier se planta en 17 suave). False = H17 (pide).
+    doblar_cualquier_par : bool
+        Si se permite doblar con cualquier mano inicial de 2 cartas.
+    doblar_solo_9_10_11 : bool
+        Si doblar solo se permite con totales 9, 10 u 11.
+    doblar_solo_10_11 : bool
+        Si doblar solo se permite con totales 10 u 11.
+    doblar_tras_dividir : bool
+        Si se permite doblar después de dividir (DAS).
+    maximas_divisiones : int
+        Máximo de divisiones permitidas (3 = hasta 4 manos).
+    rendicion_tardia : bool
+        Si se permite rendición tardía.
+    pago_blackjack : float
+        Factor de pago por blackjack natural (1.5 = 3:2, 1.2 = 6:5).
+    redividir_ases : bool
+        Si se permite volver a dividir ases.
+    pedir_en_ases_divididos : bool
+        Si se permite pedir después de dividir ases.
+    """
+
+    cantidad_mazos: int = 6
+    crupier_se_planta_suave_17: bool = True
+    doblar_cualquier_par: bool = True
+    doblar_solo_9_10_11: bool = False
+    doblar_solo_10_11: bool = False
+    doblar_tras_dividir: bool = True
+    maximas_divisiones: int = 3
+    rendicion_tardia: bool = True
+    pago_blackjack: float = 1.5
+    redividir_ases: bool = True
+    pedir_en_ases_divididos: bool = False
+
+    def puede_doblar(self, total: int) -> bool:
+        if self.doblar_solo_10_11:
             return total in (10, 11)
-        if self.double_9_10_11_only:
+        if self.doblar_solo_9_10_11:
             return total in (9, 10, 11)
-        if self.double_any_two:
+        if self.doblar_cualquier_par:
             return True
         return False
 
-    def dealer_hit_target(self) -> int:
-        return 18 if self.dealer_stands_soft_17 else 17
+    def objetivo_crupier(self) -> int:
+        return 18 if self.crupier_se_planta_suave_17 else 17

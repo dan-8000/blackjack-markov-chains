@@ -2,138 +2,149 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import Optional
 import os
 
-from .models import Hand, Shoe, Rules, parse_card, CARD_VALUE
-from .markov import compute_full_breakdown
+from .models import VALOR_CARTA, Mano, Zapato, Reglas
+from .markov import SolucionadorMarkov
 
-app = FastAPI(title="Asistente Blackjack — Cadenas de Markov")
+aplicacion = FastAPI(title="Asistente Blackjack — Cadenas de Markov")
 
-session_shoe: Optional[Shoe] = None
-session_rules: Optional[Rules] = None
-
-
-class RulesInput(BaseModel):
-    num_decks: int = 6
-    dealer_stands_soft_17: bool = True
-    double_any_two: bool = True
-    double_9_10_11_only: bool = False
-    double_10_11_only: bool = False
-    double_after_split: bool = True
-    max_splits: int = 3
-    late_surrender: bool = True
-    blackjack_pays: float = 1.5
-    resplit_aces: bool = True
+zapato_sesion: Optional[Zapato] = None
+reglas_sesion: Optional[Reglas] = None
 
 
-class CalculateInput(BaseModel):
-    player_cards: str
-    dealer_upcard: str
+class EntradaReglas(BaseModel):
+    cantidad_mazos: int = 6
+    crupier_se_planta_suave_17: bool = True
+    doblar_cualquier_par: bool = True
+    doblar_solo_9_10_11: bool = False
+    doblar_solo_10_11: bool = False
+    doblar_tras_dividir: bool = True
+    maximas_divisiones: int = 3
+    rendicion_tardia: bool = True
+    pago_blackjack: float = 1.5
+    redividir_ases: bool = True
 
 
-class UpdateInput(BaseModel):
-    cards_to_remove: str = ""
+class EntradaCalculo(BaseModel):
+    cartas_jugador: str
+    carta_visible_crupier: str
 
 
-class RemoveCardsInput(BaseModel):
-    cards: str
+class EntradaActualizacion(BaseModel):
+    cartas_a_remover: str = ""
 
 
-@app.post("/api/configurar")
-def configure(r: RulesInput):
-    global session_shoe, session_rules
-    session_rules = Rules(
-        num_decks=r.num_decks,
-        dealer_stands_soft_17=r.dealer_stands_soft_17,
-        double_any_two=r.double_any_two,
-        double_9_10_11_only=r.double_9_10_11_only,
-        double_10_11_only=r.double_10_11_only,
-        double_after_split=r.double_after_split,
-        max_splits=r.max_splits,
-        late_surrender=r.late_surrender,
-        blackjack_pays=r.blackjack_pays,
-        resplit_aces=r.resplit_aces,
+class EntradaQuitarCartas(BaseModel):
+    cartas: str
+
+
+@aplicacion.post("/api/configurar")
+def configurar(entrada: EntradaReglas):
+    global zapato_sesion, reglas_sesion
+    reglas_sesion = Reglas(
+        cantidad_mazos=entrada.cantidad_mazos,
+        crupier_se_planta_suave_17=entrada.crupier_se_planta_suave_17,
+        doblar_cualquier_par=entrada.doblar_cualquier_par,
+        doblar_solo_9_10_11=entrada.doblar_solo_9_10_11,
+        doblar_solo_10_11=entrada.doblar_solo_10_11,
+        doblar_tras_dividir=entrada.doblar_tras_dividir,
+        maximas_divisiones=entrada.maximas_divisiones,
+        rendicion_tardia=entrada.rendicion_tardia,
+        pago_blackjack=entrada.pago_blackjack,
+        redividir_ases=entrada.redividir_ases,
     )
-    session_shoe = Shoe(num_decks=r.num_decks)
+    zapato_sesion = Zapato(cantidad_mazos=entrada.cantidad_mazos)
     return {
         "mensaje": "Sesion configurada",
         "reglas": {
-            "num_decks": r.num_decks,
-            "dealer_stands_soft_17": r.dealer_stands_soft_17,
-            "double_any_two": r.double_any_two,
-            "late_surrender": r.late_surrender,
-            "max_splits": r.max_splits,
+            "cantidad_mazos": entrada.cantidad_mazos,
+            "crupier_se_planta_suave_17": entrada.crupier_se_planta_suave_17,
+            "doblar_cualquier_par": entrada.doblar_cualquier_par,
+            "rendicion_tardia": entrada.rendicion_tardia,
+            "maximas_divisiones": entrada.maximas_divisiones,
         },
-        "zapato": session_shoe.to_dict(),
+        "zapato": zapato_sesion.a_diccionario(),
     }
 
 
-@app.post("/api/calcular")
-def calcular(inp: CalculateInput):
-    global session_shoe, session_rules
-    if session_shoe is None or session_rules is None:
+@aplicacion.post("/api/calcular")
+def calcular(entrada: EntradaCalculo):
+    global zapato_sesion, reglas_sesion
+    if zapato_sesion is None or reglas_sesion is None:
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
     try:
-        player_cards = [c.strip() for c in inp.player_cards.split(",") if c.strip()]
-        dealer_card = inp.dealer_upcard.strip()
-        _card_val(dealer_card)
+        cartas_jugador = [
+            c.strip()
+            for c in entrada.cartas_jugador.split(",")
+            if c.strip()
+        ]
+        carta_crupier = entrada.carta_visible_crupier.strip()
+        _valor_carta(carta_crupier)
     except Exception:
-        raise HTTPException(400, "Formato de cartas invalido. Usa: A,2,3,...,10,J,Q,K")
+        raise HTTPException(
+            400, "Formato de cartas invalido. Usa: A,2,3,...,10,J,Q,K"
+        )
 
-    hand = Hand(player_cards)
-    result = compute_full_breakdown(hand, dealer_card, session_shoe, session_rules)
-    return result
+    mano = Mano(cartas_jugador)
+    solucionador = SolucionadorMarkov(zapato_sesion, reglas_sesion)
+    resultado = solucionador.calcular_desglose(mano, carta_crupier)
+    return resultado
 
 
-@app.post("/api/actualizar")
-def actualizar(inp: UpdateInput):
-    global session_shoe
-    if session_shoe is None:
+@aplicacion.post("/api/actualizar")
+def actualizar(entrada: EntradaActualizacion):
+    global zapato_sesion
+    if zapato_sesion is None:
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
-    cards = [c.strip() for c in inp.cards_to_remove.split(",") if c.strip()]
-    session_shoe.remove_cards(cards)
+    cartas = [
+        c.strip()
+        for c in entrada.cartas_a_remover.split(",")
+        if c.strip()
+    ]
+    zapato_sesion.quitar_cartas(cartas)
 
     return {
-        "mensaje": f"Se removieron {len(cards)} cartas",
-        "zapato": session_shoe.to_dict(),
+        "mensaje": f"Se removieron {len(cartas)} cartas",
+        "zapato": zapato_sesion.a_diccionario(),
     }
 
 
-@app.post("/api/quitar-cartas")
-def quitar_cartas(inp: RemoveCardsInput):
-    global session_shoe
-    if session_shoe is None:
+@aplicacion.post("/api/quitar-cartas")
+def quitar_cartas(entrada: EntradaQuitarCartas):
+    global zapato_sesion
+    if zapato_sesion is None:
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
-    cards = [c.strip() for c in inp.cards.split(",") if c.strip()]
-    session_shoe.remove_cards(cards)
+    cartas = [c.strip() for c in entrada.cartas.split(",") if c.strip()]
+    zapato_sesion.quitar_cartas(cartas)
 
     return {
-        "mensaje": f"{len(cards)} cartas removidas del zapato",
-        "zapato": session_shoe.to_dict(),
+        "mensaje": f"{len(cartas)} cartas removidas del zapato",
+        "zapato": zapato_sesion.a_diccionario(),
     }
 
 
-@app.get("/api/estado")
+@aplicacion.get("/api/estado")
 def estado():
-    global session_shoe, session_rules
+    global zapato_sesion
     return {
-        "configurado": session_shoe is not None,
-        "zapato": session_shoe.to_dict() if session_shoe else None,
+        "configurado": zapato_sesion is not None,
+        "zapato": zapato_sesion.a_diccionario() if zapato_sesion else None,
     }
 
 
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+DIR_FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
+aplicacion.mount("/static", StaticFiles(directory=DIR_FRONTEND), name="static")
 
 
-@app.get("/")
-def index():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+@aplicacion.get("/")
+def indice():
+    return FileResponse(os.path.join(DIR_FRONTEND, "index.html"))
 
 
-def _card_val(rank: str) -> int:
-    return CARD_VALUE[rank.strip().upper()]
+def _valor_carta(rango: str) -> int:
+    return VALOR_CARTA[rango.strip().upper()]
