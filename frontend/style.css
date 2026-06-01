@@ -6,6 +6,7 @@
 
 :root {
   --bg: #0d1b2a;
+  --felt: #0f3d24;
   --surface: #1b2838;
   --surface2: #243447;
   --text: #e0e6ed;
@@ -14,15 +15,23 @@
   --green: #66bb6a;
   --red: #ef5350;
   --gold: #ffd54f;
+  --gold-dark: #c9a82c;
+  --card-bg: #fefefe;
   --card-red: #c62828;
-  --card-black: #1a1a2e;
+  --card-black: #111;
   --radius: 10px;
   --font: system-ui, -apple-system, sans-serif;
+  --shoe-low: #5c9ce6;
+  --shoe-mid: #66bb6a;
+  --shoe-high: #ef6c5c;
 }
 
 body {
   font-family: var(--font);
   background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(15,61,36,0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(20,50,40,0.3) 0%, transparent 50%);
   color: var(--text);
   line-height: 1.6;
   min-height: 100vh;
@@ -36,8 +45,9 @@ header {
 }
 header h1 {
   font-size: 2rem;
-  color: var(--accent);
+  color: var(--gold);
   letter-spacing: 1px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 .subtitle {
   color: var(--text-dim);
@@ -46,7 +56,7 @@ header h1 {
 
 /* -- SECTIONS -- */
 main {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
 }
 section {
@@ -115,10 +125,11 @@ button {
   border-radius: 6px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  transition: filter 0.2s;
+  transition: filter 0.2s, transform 0.1s;
 }
 #btn-config:hover, #btn-calculate:hover, #btn-resolve:hover {
   filter: brightness(1.15);
+  transform: translateY(-1px);
 }
 
 #config-status, #resolve-status {
@@ -126,35 +137,81 @@ button {
   font-size: 0.85rem;
 }
 
-/* -- SHOE -- */
+/* -- SHOE BARS -- */
 .shoe-grid {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
 }
-.shoe-card {
-  background: var(--surface2);
-  border-radius: 8px;
-  padding: 10px 14px;
+.shoe-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.shoe-label {
+  width: 28px;
   text-align: center;
-  min-width: 58px;
-  border: 1px solid transparent;
-}
-.shoe-card .label {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-.shoe-card .count {
-  font-size: 1.3rem;
   font-weight: 700;
-  color: var(--accent);
+  font-size: 0.95rem;
+  color: var(--text);
+  flex-shrink: 0;
 }
-.shoe-total {
-  text-align: center;
-  margin-top: 10px;
+.shoe-bar-outer {
+  flex: 1;
+  height: 22px;
+  background: var(--bg);
+  border-radius: 11px;
+  overflow: hidden;
+  position: relative;
+}
+.shoe-bar-inner {
+  height: 100%;
+  border-radius: 11px;
+  transition: width 0.5s ease;
+}
+.shoe-bar-count {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  text-shadow: 0 0 6px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+.shoe-bar-pct {
+  width: 52px;
+  text-align: right;
+  font-size: 0.78rem;
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.shoe-bar-inner.high  { background: var(--shoe-high); }
+.shoe-bar-inner.neutral { background: var(--shoe-mid); }
+.shoe-bar-inner.low  { background: var(--shoe-low); }
+
+.shoe-total-wrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--surface2);
+}
+.shoe-total-label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.shoe-total-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
 }
 
 /* -- CALC INPUTS -- */
@@ -168,6 +225,9 @@ button {
   display: block;
   margin-bottom: 6px;
   font-size: 0.9rem;
+}
+.input-group input[type="text"] {
+  width: 240px;
 }
 .hint {
   color: var(--text-dim);
@@ -208,60 +268,95 @@ button {
   border-color: var(--accent);
 }
 
-/* -- CARD PREVIEW (playing card visual) -- */
+/* -- CARD PREVIEW (playing card REDESIGN) -- */
 .card-preview {
   display: flex;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 .playing-card {
-  width: 70px;
-  height: 100px;
-  border-radius: 8px;
-  background: #fff;
+  width: 82px;
+  height: 116px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #fdfdfd 0%, #f0f0f0 100%);
   color: #000;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 7px 9px;
   font-weight: 700;
-  font-family: "Georgia", serif;
-  box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  font-family: "Georgia", "Times New Roman", serif;
+  box-shadow:
+    0 3px 10px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.4);
   position: relative;
-  border: 1px solid #ccc;
+  border: 1.5px solid #d4af37;
+  user-select: none;
+  transition: transform 0.15s;
 }
+.playing-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+}
+
 .playing-card .corner-top {
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1;
-  font-size: 0.85rem;
+  line-height: 1.05;
+  font-size: 0.9rem;
 }
 .playing-card .corner-top .suit-icon {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  margin-top: 1px;
 }
+
 .playing-card .center-suit {
-  font-size: 1.8rem;
+  font-size: 2rem;
   text-align: center;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.7;
 }
+
+/* Figura decorativa central para J, Q, K */
+.playing-card .center-figure {
+  font-size: 1.4rem;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  font-weight: 400;
+}
+.playing-card .center-figure span {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
 .playing-card .corner-bot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1;
-  font-size: 0.85rem;
+  line-height: 1.05;
+  font-size: 0.9rem;
   transform: rotate(180deg);
 }
 .playing-card .corner-bot .suit-icon {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
-.playing-card.red { color: #c62828; }
-.playing-card.black { color: #1a1a2e; }
+.playing-card.red {
+  color: var(--card-red);
+  border-color: #e0b0b0;
+}
+.playing-card.black {
+  color: var(--card-black);
+  border-color: #b0b0b0;
+}
 
 /* -- RESULTS -- */
 .hand-summary {
@@ -389,6 +484,9 @@ button {
 @media (max-width: 600px) {
   body { padding: 10px; }
   .config-grid { grid-template-columns: 1fr 1fr; }
-  .playing-card { width: 56px; height: 82px; }
-  .playing-card .center-suit { font-size: 1.3rem; }
+  .playing-card { width: 62px; height: 90px; padding: 5px 6px; }
+  .playing-card .corner-top { font-size: 0.72rem; }
+  .playing-card .center-suit { font-size: 1.4rem; }
+  .playing-card .center-figure span { font-size: 1.8rem; }
+  .input-group input[type="text"] { width: 100%; }
 }

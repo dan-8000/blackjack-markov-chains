@@ -9,7 +9,7 @@
 <body>
 
 <header>
-  <h1>Asistente de Blackjack</h1>
+  <h1>♠ Asistente de Blackjack ♠</h1>
   <p class="subtitle">Potenciado por Cadenas de Markov</p>
 </header>
 
@@ -79,27 +79,27 @@
     <span id="config-status"></span>
   </section>
 
-  <!-- ZAPATO -->
-  <section id="shoe-section" class="hidden">
-    <h2>Cartas Restantes en el Zapato</h2>
-    <div id="shoe-display" class="shoe-grid"></div>
-    <p class="shoe-total">Total: <span id="shoe-total">0</span> cartas</p>
-  </section>
-
   <!-- CALCULADORA -->
   <section id="calc-section" class="hidden">
     <h2>Calcular Jugada</h2>
     <div class="calc-inputs">
+
       <div class="input-group">
         <label>Tus cartas <span class="hint">(separadas por coma: 10,A)</span></label>
-        <input type="text" id="input-player" placeholder="10,A">
+        <input type="text" id="input-player" placeholder="10,A" autocomplete="off">
         <div class="card-preview" id="player-preview"></div>
+      </div>
+
+      <div class="input-group">
+        <label>Cartas de otros jugadores <span class="hint">(todas las visibles: 5,K,9,3)</span></label>
+        <input type="text" id="input-others" placeholder="5,K" autocomplete="off">
+        <div class="card-preview" id="others-preview"></div>
       </div>
 
       <div class="input-group">
         <label>Carta visible del Crupier</label>
         <div class="dealer-input-row">
-          <input type="text" id="input-dealer" placeholder="6" maxlength="3">
+          <input type="text" id="input-dealer" placeholder="6" maxlength="3" autocomplete="off">
           <div class="quick-btns">
             <button class="chip-btn" data-card="A">A</button>
             <button class="chip-btn" data-card="2">2</button>
@@ -148,17 +148,28 @@
     <div class="resolve-box">
       <h3>Resolver Mano</h3>
       <label>Cartas que salieron (separadas por coma):
-        <input type="text" id="input-resolve" placeholder="5,Q,8">
+        <input type="text" id="input-resolve" placeholder="5,Q,8" autocomplete="off">
       </label>
       <button id="btn-resolve">Actualizar Zapato</button>
       <span id="resolve-status"></span>
     </div>
   </section>
 
+  <!-- ZAPATO -->
+  <section id="shoe-section" class="hidden">
+    <h2>Cartas Restantes en el Zapato</h2>
+    <div id="shoe-display" class="shoe-grid"></div>
+    <div class="shoe-total-wrap">
+      <span class="shoe-total-label">TOTAL</span>
+      <span id="shoe-total" class="shoe-total-big">312</span>
+      <span class="shoe-total-label">cartas</span>
+    </div>
+  </section>
+
   <!-- PIE -->
   <section id="markov-note" class="note">
     <p>Toda la logica de probabilidades usa <strong>Cadenas de Markov</strong>.
-    Las transiciones se calculan dinamicamente desde la composicion real del zapato (cartas ya jugadas).</p>
+    Cada carta visible en la mesa se descuenta del zapato; las transiciones se recalculan dinamicamente.</p>
   </section>
 </main>
 

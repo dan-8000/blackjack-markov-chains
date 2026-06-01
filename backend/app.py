@@ -6,7 +6,7 @@ from typing import Optional
 import os
 
 from .models import VALOR_CARTA, Mano, Zapato, Reglas
-from .markov import SolucionadorMarkov
+from .markov import SolucionadorMarkov, convertir_cartas
 
 aplicacion = FastAPI(title="Asistente Blackjack — Cadenas de Markov")
 
@@ -30,6 +30,7 @@ class EntradaReglas(BaseModel):
 class EntradaCalculo(BaseModel):
     cartas_jugador: str
     carta_visible_crupier: str
+    cartas_otros: str = ""
 
 
 class EntradaActualizacion(BaseModel):
@@ -76,11 +77,8 @@ def calcular(entrada: EntradaCalculo):
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
     try:
-        cartas_jugador = [
-            c.strip()
-            for c in entrada.cartas_jugador.split(",")
-            if c.strip()
-        ]
+        cartas_jugador = convertir_cartas(entrada.cartas_jugador)
+        cartas_otros = convertir_cartas(entrada.cartas_otros)
         carta_crupier = entrada.carta_visible_crupier.strip()
         _valor_carta(carta_crupier)
     except Exception:
@@ -88,9 +86,16 @@ def calcular(entrada: EntradaCalculo):
             400, "Formato de cartas invalido. Usa: A,2,3,...,10,J,Q,K"
         )
 
+    zapato_temporal = zapato_sesion.copiar()
+    zapato_temporal.quitar_cartas(cartas_otros)
+    zapato_temporal.quitar_carta(carta_crupier)
+
     mano = Mano(cartas_jugador)
-    solucionador = SolucionadorMarkov(zapato_sesion, reglas_sesion)
+    solucionador = SolucionadorMarkov(zapato_temporal, reglas_sesion)
     resultado = solucionador.calcular_desglose(mano, carta_crupier)
+
+    resultado["zapato"] = zapato_sesion.a_diccionario()
+    resultado["cartas_otros"] = cartas_otros
     return resultado
 
 
@@ -100,11 +105,7 @@ def actualizar(entrada: EntradaActualizacion):
     if zapato_sesion is None:
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
-    cartas = [
-        c.strip()
-        for c in entrada.cartas_a_remover.split(",")
-        if c.strip()
-    ]
+    cartas = convertir_cartas(entrada.cartas_a_remover)
     zapato_sesion.quitar_cartas(cartas)
 
     return {
@@ -119,7 +120,7 @@ def quitar_cartas(entrada: EntradaQuitarCartas):
     if zapato_sesion is None:
         raise HTTPException(400, "Configura primero la sesion con /api/configurar")
 
-    cartas = [c.strip() for c in entrada.cartas.split(",") if c.strip()]
+    cartas = convertir_cartas(entrada.cartas)
     zapato_sesion.quitar_cartas(cartas)
 
     return {

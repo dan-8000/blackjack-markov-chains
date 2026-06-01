@@ -1,6 +1,7 @@
 const API = "/api";
 
 let estadoZapato = null;
+let maximoInicial = null;
 
 const palos = ["spades", "hearts", "diamonds", "clubs"];
 let indicePalo = 0;
@@ -12,7 +13,7 @@ function siguientePalo() {
 }
 
 function simboloPalo(palo) {
-  return { spades: "♠", hearts: "♥", diamonds: "♦", clubs: "♣" }[palo];
+  return { spades: "\u2660", hearts: "\u2665", diamonds: "\u2666", clubs: "\u2663" }[palo];
 }
 
 function colorPalo(palo) {
@@ -26,25 +27,41 @@ function rangoCorto(rango) {
   return r;
 }
 
+function figuraDecorativa(rango) {
+  const r = rango.trim().toUpperCase();
+  if (r === "J" || r === "JACK" || r === "JOTA") return "\u265E";
+  if (r === "Q" || r === "QUEEN" || r === "REINA") return "\u265B";
+  if (r === "K" || r === "KING" || r === "REY") return "\u265A";
+  return null;
+}
+
 function crearElementoCarta(rango, palo) {
   const carta = document.createElement("div");
   carta.className = "playing-card " + colorPalo(palo);
   const simbolo = simboloPalo(palo);
   const rs = rangoCorto(rango);
+  const figura = figuraDecorativa(rango);
+
+  let centro;
+  if (figura) {
+    centro = `<div class="center-figure"><span>${figura}</span></div>`;
+  } else {
+    centro = `<div class="center-suit">${simbolo}</div>`;
+  }
 
   carta.innerHTML = `
     <div class="corner-top"><span>${rs}</span><span class="suit-icon">${simbolo}</span></div>
-    <div class="center-suit">${simbolo}</div>
+    ${centro}
     <div class="corner-bot"><span>${rs}</span><span class="suit-icon">${simbolo}</span></div>
   `;
   return carta;
 }
 
-function mostrarCartasJugador(textoCartas) {
-  const previsualizacion = document.getElementById("player-preview");
+function mostrarCartas(contenedorId, textoCartas) {
+  const previsualizacion = document.getElementById(contenedorId);
   previsualizacion.innerHTML = "";
-  indicePalo = 0;
   const cartas = textoCartas.split(",").map(c => c.trim()).filter(Boolean);
+  if (cartas.length === 0) return;
   cartas.forEach(c => {
     const palo = siguientePalo();
     previsualizacion.appendChild(crearElementoCarta(c, palo));
@@ -59,20 +76,49 @@ function mostrarCartaCrupier(textoCarta) {
   previsualizacion.appendChild(crearElementoCarta(c, "spades"));
 }
 
+function barColor(value) {
+  if (value >= 10) return "high";
+  if (value >= 7) return "neutral";
+  return "low";
+}
+
 function mostrarZapato(datos) {
   if (!datos || !datos.restantes) return;
   estadoZapato = datos;
+
+  if (!maximoInicial) {
+    maximoInicial = {};
+    const orden = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+    orden.forEach(etiqueta => {
+      maximoInicial[etiqueta] = datos.por_etiqueta[etiqueta];
+    });
+  }
+
   const contenedor = document.getElementById("shoe-display");
   contenedor.innerHTML = "";
+  const totalCartas = datos.total_restante;
   const orden = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
   orden.forEach(etiqueta => {
     const cantidad = datos.por_etiqueta[etiqueta];
-    const div = document.createElement("div");
-    div.className = "shoe-card";
-    div.innerHTML = `<span class="label">${etiqueta}</span><span class="count">${cantidad}</span>`;
-    contenedor.appendChild(div);
+    const maximo = maximoInicial[etiqueta] || 1;
+    const porcentaje = totalCartas > 0 ? (cantidad / totalCartas) * 100 : 0;
+    const ancho = (cantidad / maximo) * 100;
+
+    const fila = document.createElement("div");
+    fila.className = "shoe-row";
+    fila.innerHTML = `
+      <span class="shoe-label">${etiqueta}</span>
+      <div class="shoe-bar-outer">
+        <div class="shoe-bar-inner ${barColor(parseInt(etiqueta) || 1)}" style="width:${Math.max(ancho, 1)}%"></div>
+        <span class="shoe-bar-count">${cantidad}</span>
+      </div>
+      <span class="shoe-bar-pct">${porcentaje.toFixed(1)}%</span>
+    `;
+    contenedor.appendChild(fila);
   });
-  document.getElementById("shoe-total").textContent = datos.total_restante;
+
+  document.getElementById("shoe-total").textContent = totalCartas;
 }
 
 function mostrarResultados(datos) {
@@ -109,7 +155,8 @@ function mostrarResultados(datos) {
 
   const rejillaDist = document.getElementById("dealer-dist");
   rejillaDist.innerHTML = "";
-  const maxPorcentaje = Math.max(...Object.values(datos.crupier.distribucion_final), 1);
+  const porcentajes = Object.values(datos.crupier.distribucion_final);
+  const maxPorcentaje = Math.max(...porcentajes, 1);
   for (const [etiqueta, porcentaje] of Object.entries(datos.crupier.distribucion_final)) {
     const envoltura = document.createElement("div");
     envoltura.className = "dist-bar-wrap";
@@ -146,15 +193,16 @@ async function configurarPartida() {
   const datos = await respuesta.json();
 
   if (respuesta.ok) {
-    document.getElementById("config-status").textContent = "✔ Configurada";
+    document.getElementById("config-status").textContent = "\u2714 Configurada";
     document.getElementById("config-status").style.color = "var(--green)";
 
+    maximoInicial = null;
     document.getElementById("shoe-section").classList.remove("hidden");
     document.getElementById("calc-section").classList.remove("hidden");
 
     mostrarZapato(datos.zapato);
   } else {
-    document.getElementById("config-status").textContent = "✖ Error";
+    document.getElementById("config-status").textContent = "\u2716 Error";
     document.getElementById("config-status").style.color = "var(--red)";
   }
 }
@@ -162,6 +210,7 @@ async function configurarPartida() {
 async function calcularJugada() {
   const cartasJugador = document.getElementById("input-player").value;
   const cartaCrupier = document.getElementById("input-dealer").value.trim();
+  const cartasOtros = document.getElementById("input-others").value;
 
   if (!cartasJugador || !cartaCrupier) {
     alert("Ingresa tus cartas y la carta del crupier.");
@@ -174,6 +223,7 @@ async function calcularJugada() {
     body: JSON.stringify({
       cartas_jugador: cartasJugador,
       carta_visible_crupier: cartaCrupier,
+      cartas_otros: cartasOtros,
     }),
   });
   const datos = await respuesta.json();
@@ -197,11 +247,11 @@ async function resolverMano() {
   const datos = await respuesta.json();
 
   if (respuesta.ok) {
-    document.getElementById("resolve-status").textContent = "✔ Zapato actualizado";
+    document.getElementById("resolve-status").textContent = "\u2714 Zapato actualizado";
     document.getElementById("resolve-status").style.color = "var(--green)";
     mostrarZapato(datos.zapato);
   } else {
-    document.getElementById("resolve-status").textContent = "✖ Error";
+    document.getElementById("resolve-status").textContent = "\u2716 Error";
     document.getElementById("resolve-status").style.color = "var(--red)";
   }
 }
@@ -211,7 +261,11 @@ document.getElementById("btn-calculate").addEventListener("click", calcularJugad
 document.getElementById("btn-resolve").addEventListener("click", resolverMano);
 
 document.getElementById("input-player").addEventListener("input", function () {
-  mostrarCartasJugador(this.value);
+  mostrarCartas("player-preview", this.value);
+});
+
+document.getElementById("input-others").addEventListener("input", function () {
+  mostrarCartas("others-preview", this.value);
 });
 
 document.getElementById("input-dealer").addEventListener("input", function () {
