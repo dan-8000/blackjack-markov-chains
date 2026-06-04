@@ -1,142 +1,103 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Optional
-import os
 
-from .models import VALOR_CARTA, Mano, Zapato, Reglas
-from .markov import SolucionadorMarkov, convertir_cartas
-
-aplicacion = FastAPI(title="Asistente Blackjack — Cadenas de Markov")
-
-zapato_sesion: Optional[Zapato] = None
-reglas_sesion: Optional[Reglas] = None
+from . import carta
+from .zapato import Zapato
+from . import markov
 
 
-class EntradaReglas(BaseModel):
+# ── App ────────────────────────────────────────────────────
+
+aplicacion = FastAPI(title="Blackjack — Cadenas de Markov")
+
+# ── Estado global (sesion unica) ───────────────────────────
+
+zapato_sesion: Zapato = None
+
+
+# ── Modelos de entrada ─────────────────────────────────────
+
+class EntradaConfigurar(BaseModel):
     cantidad_mazos: int = 6
-    crupier_se_planta_suave_17: bool = True
-    doblar_cualquier_par: bool = True
-    doblar_solo_9_10_11: bool = False
-    doblar_solo_10_11: bool = False
-    doblar_tras_dividir: bool = True
-    maximas_divisiones: int = 3
-    rendicion_tardia: bool = True
-    pago_blackjack: float = 1.5
-    redividir_ases: bool = True
 
 
-class EntradaCalculo(BaseModel):
-    cartas_jugador: str
-    carta_visible_crupier: str
+class EntradaProbabilidades(BaseModel):
+    mis_cartas: str          # ej: "10,6"
+    cartas_otros: str = ""   # ej: "5,K,9,3,10"
+
+
+class EntradaActualizar(BaseModel):
+    mis_cartas: str
     cartas_otros: str = ""
 
 
-class EntradaActualizacion(BaseModel):
-    cartas_a_remover: str = ""
-
-
-class EntradaQuitarCartas(BaseModel):
-    cartas: str
-
+# ── Endpoints ──────────────────────────────────────────────
 
 @aplicacion.post("/api/configurar")
-def configurar(entrada: EntradaReglas):
-    global zapato_sesion, reglas_sesion
-    reglas_sesion = Reglas(
-        cantidad_mazos=entrada.cantidad_mazos,
-        crupier_se_planta_suave_17=entrada.crupier_se_planta_suave_17,
-        doblar_cualquier_par=entrada.doblar_cualquier_par,
-        doblar_solo_9_10_11=entrada.doblar_solo_9_10_11,
-        doblar_solo_10_11=entrada.doblar_solo_10_11,
-        doblar_tras_dividir=entrada.doblar_tras_dividir,
-        maximas_divisiones=entrada.maximas_divisiones,
-        rendicion_tardia=entrada.rendicion_tardia,
-        pago_blackjack=entrada.pago_blackjack,
-        redividir_ases=entrada.redividir_ases,
-    )
-    zapato_sesion = Zapato(cantidad_mazos=entrada.cantidad_mazos)
+def configurar(entrada: EntradaConfigurar):
+    """Crea un zapato nuevo con la cantidad de mazos indicada."""
+    global zapato_sesion
+    zapato_sesion = Zapato(entrada.cantidad_mazos)
     return {
-        "mensaje": "Sesion configurada",
-        "reglas": {
-            "cantidad_mazos": entrada.cantidad_mazos,
-            "crupier_se_planta_suave_17": entrada.crupier_se_planta_suave_17,
-            "doblar_cualquier_par": entrada.doblar_cualquier_par,
-            "rendicion_tardia": entrada.rendicion_tardia,
-            "maximas_divisiones": entrada.maximas_divisiones,
-        },
-        "zapato": zapato_sesion.a_diccionario(),
+        "mensaje": "Zapato configurado",
+        "total_cartas": zapato_sesion.total(),
+        "conteo": [int(x) for x in zapato_sesion.conteo],
     }
 
 
-@aplicacion.post("/api/calcular")
-def calcular(entrada: EntradaCalculo):
-    global zapato_sesion, reglas_sesion
-    if zapato_sesion is None or reglas_sesion is None:
-        raise HTTPException(400, "Configura primero la sesion con /api/configurar")
+@aplicacion.post("/api/probabilidades")
+def probabilidades(entrada: EntradaProbabilidades):
+    """
+    Calcula la tabla de probabilidades de la siguiente carta.
+    Usa la matriz de transicion de Markov con numpy.
+    """
+    global zapato_sesion
+    if zapato_sesion is None:
+        raise HTTPException(400, "Configura primero con /api/configurar")
 
-    try:
-        cartas_jugador = convertir_cartas(entrada.cartas_jugador)
-        cartas_otros = convertir_cartas(entrada.cartas_otros)
-        carta_crupier = entrada.carta_visible_crupier.strip()
-        _valor_carta(carta_crupier)
-    except Exception:
-        raise HTTPException(
-            400, "Formato de cartas invalido. Usa: A,2,3,...,10,J,Q,K"
-        )
+    mis = carta.convertir_a_lista(entrada.mis_cartas)
+    otros = carta.convertir_a_lista(entrada.cartas_otros)
 
-    zapato_temporal = zapato_sesion.copiar()
-    zapato_temporal.quitar_cartas(cartas_otros)
-    zapato_temporal.quitar_carta(carta_crupier)
+    if not mis:
+        raise HTTPException(400, "Ingresa al menos una carta en 'mis_cartas'")
 
-    mano = Mano(cartas_jugador)
-    solucionador = SolucionadorMarkov(zapato_temporal, reglas_sesion)
-    resultado = solucionador.calcular_desglose(mano, carta_crupier)
+    resultado = markov.calcular_probabilidades(mis, otros, zapato_sesion)
 
-    resultado["zapato"] = zapato_sesion.a_diccionario()
-    resultado["cartas_otros"] = cartas_otros
+    resultado["zapato"] = {
+        "total": zapato_sesion.total(),
+        "conteo": [int(x) for x in zapato_sesion.conteo],
+    }
+
     return resultado
 
 
 @aplicacion.post("/api/actualizar")
-def actualizar(entrada: EntradaActualizacion):
+def actualizar(entrada: EntradaActualizar):
+    """
+    Descuenta permanentemente del zapato las cartas que ya salieron.
+    Incluye tanto las mias como las de otros jugadores/crupier.
+    """
     global zapato_sesion
     if zapato_sesion is None:
-        raise HTTPException(400, "Configura primero la sesion con /api/configurar")
+        raise HTTPException(400, "Configura primero con /api/configurar")
 
-    cartas = convertir_cartas(entrada.cartas_a_remover)
-    zapato_sesion.quitar_cartas(cartas)
+    mis = carta.convertir_a_lista(entrada.mis_cartas)
+    otros = carta.convertir_a_lista(entrada.cartas_otros)
+    todas = mis + otros
+
+    zapato_sesion.quitar_varias(todas)
 
     return {
-        "mensaje": f"Se removieron {len(cartas)} cartas",
-        "zapato": zapato_sesion.a_diccionario(),
+        "mensaje": f"{len(todas)} cartas removidas del zapato",
+        "total_restante": zapato_sesion.total(),
+        "conteo": [int(x) for x in zapato_sesion.conteo],
     }
 
 
-@aplicacion.post("/api/quitar-cartas")
-def quitar_cartas(entrada: EntradaQuitarCartas):
-    global zapato_sesion
-    if zapato_sesion is None:
-        raise HTTPException(400, "Configura primero la sesion con /api/configurar")
-
-    cartas = convertir_cartas(entrada.cartas)
-    zapato_sesion.quitar_cartas(cartas)
-
-    return {
-        "mensaje": f"{len(cartas)} cartas removidas del zapato",
-        "zapato": zapato_sesion.a_diccionario(),
-    }
-
-
-@aplicacion.get("/api/estado")
-def estado():
-    global zapato_sesion
-    return {
-        "configurado": zapato_sesion is not None,
-        "zapato": zapato_sesion.a_diccionario() if zapato_sesion else None,
-    }
-
+# ── Archivos estaticos y pagina principal ──────────────────
 
 DIR_FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
 aplicacion.mount("/static", StaticFiles(directory=DIR_FRONTEND), name="static")
@@ -145,7 +106,3 @@ aplicacion.mount("/static", StaticFiles(directory=DIR_FRONTEND), name="static")
 @aplicacion.get("/")
 def indice():
     return FileResponse(os.path.join(DIR_FRONTEND, "index.html"))
-
-
-def _valor_carta(rango: str) -> int:
-    return VALOR_CARTA[rango.strip().upper()]
