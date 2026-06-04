@@ -141,6 +141,28 @@ tr.top td { font-weight: 700; }
 .caja-verde strong { color: var(--green); }
 .caja-dorada strong { color: var(--gold); }
 
+/* ── MATRIZ DE MARKOV ── */
+#btn-toggle-matriz {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--surface2); font-size: 0.75rem;
+  padding: 6px 12px; align-self: flex-start;
+}
+#btn-toggle-matriz:hover { color: var(--accent); border-color: var(--accent); }
+
+.matriz-scroll { overflow: auto; max-height: 280px; }
+.matriz-tabla { border-collapse: collapse; font-size: 0.58rem; white-space: nowrap; }
+.matriz-tabla th {
+  padding: 1px 3px; color: var(--text-dim);
+  font-weight: 400; text-align: center; position: sticky; top: 0;
+  background: var(--surface); z-index: 1;
+}
+.matriz-tabla td { padding: 1px 3px; text-align: center; min-width: 20px; }
+.matriz-label {
+  font-weight: 700; color: var(--text-dim); position: sticky; left: 0;
+  background: var(--surface);
+}
+.matriz-celda { border-radius: 2px; color: var(--text-dim); }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 700px) {
   html, body { overflow: auto; }

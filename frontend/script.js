@@ -3,6 +3,7 @@ const API = "/api";
 let sesionActiva = false;
 let maximoInicial = null;
 let temporizador = null;
+let matrizActual = null;
 
 // ── Zapato compacto ──────────────────────────────────────
 
@@ -79,6 +80,11 @@ function mostrarResultados(datos) {
   document.getElementById("res-carta-top").textContent = datos.carta_mas_probable;
 
   mostrarZapatoCompacto(datos.zapato.conteo);
+
+  if (datos.matriz) {
+    matrizActual = datos.matriz;
+    document.getElementById("btn-toggle-matriz").classList.remove("hidden");
+  }
 }
 
 // ── API calls ────────────────────────────────────────────
@@ -143,8 +149,16 @@ async function apiActualizar() {
     document.getElementById("update-status").textContent = "✔ " + datos.mensaje;
     document.getElementById("update-status").style.color = "var(--green)";
     maximoInicial = null;
+
+    document.getElementById("input-mis").value = "";
+    document.getElementById("input-otros").value = "";
+    document.getElementById("results-section").classList.add("hidden");
+    document.getElementById("btn-toggle-matriz").classList.add("hidden");
+    document.getElementById("matriz-container").classList.add("hidden");
+    document.getElementById("btn-toggle-matriz").textContent = "Ver matriz de Markov ▼";
+    matrizActual = null;
+
     mostrarZapatoCompacto(datos.conteo);
-    actualizarAutomatico();
   } else {
     document.getElementById("update-status").textContent = "✖ Error";
     document.getElementById("update-status").style.color = "var(--red)";
@@ -158,10 +172,70 @@ function actualizarAutomatico() {
   temporizador = setTimeout(apiProbabilidades, 400);
 }
 
+// ── Matriz de Markov desplegable ──────────────────────────
+
+function mostrarMatriz(matriz) {
+  const contenedor = document.getElementById("matriz-display");
+  contenedor.innerHTML = "";
+
+  const tabla = document.createElement("table");
+  tabla.className = "matriz-tabla";
+
+  // Encabezado
+  const thead = document.createElement("thead");
+  let filaEnc = "<tr><th></th>";
+  for (let j = 4; j <= 21; j++) filaEnc += `<th>${j}</th>`;
+  filaEnc += "<th>BUST</th></tr>";
+  thead.innerHTML = filaEnc;
+  tabla.appendChild(thead);
+
+  // Cuerpo
+  const tbody = document.createElement("tbody");
+  const maxVal = matriz.flat().reduce((a, b) => Math.max(a, b), 0.001);
+
+  for (let i = 0; i < 19; i++) {
+    const tr = document.createElement("tr");
+    const label = i < 18 ? i + 4 : "BUST";
+    tr.innerHTML = `<td class="matriz-label">${label}</td>`;
+
+    for (let j = 0; j < 19; j++) {
+      const val = matriz[i][j];
+      const td = document.createElement("td");
+      td.textContent = val > 0 ? (val * 100).toFixed(0) : "";
+      td.className = "matriz-celda";
+      const intensidad = val / maxVal;
+      if (val > 0) {
+        td.style.background = `rgba(79, 195, 247, ${intensidad.toFixed(2)})`;
+        if (intensidad > 0.5) td.style.color = "#000";
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  tabla.appendChild(tbody);
+  contenedor.appendChild(tabla);
+}
+
+function toggleMatriz() {
+  const contenedor = document.getElementById("matriz-container");
+  const boton = document.getElementById("btn-toggle-matriz");
+  const visible = !contenedor.classList.contains("hidden");
+
+  if (visible) {
+    contenedor.classList.add("hidden");
+    boton.textContent = "Ver matriz de Markov ▼";
+  } else {
+    contenedor.classList.remove("hidden");
+    boton.textContent = "Ocultar matriz de Markov ▲";
+    if (matrizActual) mostrarMatriz(matrizActual);
+  }
+}
+
 // ── Eventos ──────────────────────────────────────────────
 
 document.getElementById("btn-config").addEventListener("click", apiConfigurar);
 document.getElementById("btn-actualizar").addEventListener("click", apiActualizar);
+document.getElementById("btn-toggle-matriz").addEventListener("click", toggleMatriz);
 
 document.getElementById("input-mis").addEventListener("input", actualizarAutomatico);
 document.getElementById("input-otros").addEventListener("input", actualizarAutomatico);
