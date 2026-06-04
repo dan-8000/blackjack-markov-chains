@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack — Cadenas de Markov</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <h1>Blackjack — Cadenas de Markov</h1>
+</header>
+
+<div class="layout">
+
+  <!-- ========== COLUMNA IZQUIERDA: INPUTS ========== -->
+  <aside class="panel-izq">
+
+    <div class="config-row">
+      <label>Mazos
+        <select id="cfg-decks">
+          <option value="1">1</option><option value="2">2</option>
+          <option value="4">4</option><option value="6" selected>6</option>
+          <option value="8">8</option>
+        </select>
+      </label>
+      <button id="btn-config">Iniciar Sesion</button>
+      <span id="config-status"></span>
+    </div>
+
+    <div class="input-row">
+      <label>Mis cartas <span class="hint">(ej: 10,6)</span></label>
+      <input type="text" id="input-mis" placeholder="10,6" autocomplete="off">
+    </div>
+
+    <div class="input-row">
+      <label>Cartas de otros <span class="hint">(crupier + mesa)</span></label>
+      <input type="text" id="input-otros" placeholder="5,K,10" autocomplete="off">
+    </div>
+
+    <button id="btn-actualizar">Actualizar Zapato</button>
+    <span id="update-status"></span>
+
+    <p class="instrucciones">
+      Escribe tus cartas arriba. Al pedir, añade la carta nueva a <em>Mis cartas</em> (ej: 10,6,4).
+      La derecha se actualiza sola.
+    </p>
+  </aside>
+
+  <!-- ========== COLUMNA DERECHA: RESULTADOS ========== -->
+  <section class="panel-der">
+
+    <!-- Zapato compacto -->
+    <div id="shoe-section" class="hidden">
+      <div id="shoe-display" class="shoe-compact"></div>
+      <div class="shoe-total-wrap">
+        <span class="shoe-total-label">TOTAL</span>
+        <span id="shoe-total">312</span>
+        <span class="shoe-total-label">cartas</span>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div id="results-section" class="hidden">
+      <div class="mano-resumen">
+        Tu mano: <strong id="res-cartas">-</strong> → Total <strong id="res-total">-</strong>
+        <span id="res-suave" class="badge-suave hidden">suave</span>
+      </div>
+
+      <table id="tabla-probs">
+        <thead>
+          <tr>
+            <th>Carta</th><th>Prob</th><th>Total nuevo</th><th>¿Pasa?</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="resumen-fila">
+        <span class="caja-roja">Pasarte: <strong id="res-pasarse">-</strong></span>
+        <span class="caja-verde">A salvo: <strong id="res-no-pasarse">-</strong></span>
+        <span class="caja-dorada">Más probable: <strong id="res-carta-top">-</strong></span>
+      </div>
+
+      <button id="btn-toggle-matriz" class="hidden">Ver matriz de Markov ▼</button>
+      <div id="matriz-container" class="hidden">
+        <div id="matriz-display" class="matriz-scroll"></div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
