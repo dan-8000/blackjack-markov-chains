@@ -10,107 +10,83 @@
 
 <header>
   <h1>Blackjack — Cadenas de Markov</h1>
-  <p class="subtitle">Probabilidad de la siguiente carta basada en la composicion real del zapato</p>
 </header>
 
-<main>
+<div class="layout">
 
-  <!-- CONFIG -->
-  <section id="config-section">
-    <h2>Configurar</h2>
+  <!-- ========== COLUMNA IZQUIERDA: INPUTS ========== -->
+  <aside class="panel-izq">
+
     <div class="config-row">
-      <label>Numero de mazos:
+      <label>Mazos
         <select id="cfg-decks">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="4">4</option>
-          <option value="6" selected>6</option>
+          <option value="1">1</option><option value="2">2</option>
+          <option value="4">4</option><option value="6" selected>6</option>
           <option value="8">8</option>
         </select>
       </label>
       <button id="btn-config">Iniciar Sesion</button>
       <span id="config-status"></span>
     </div>
-  </section>
-
-  <!-- CALCULADORA -->
-  <section id="calc-section" class="hidden">
-    <h2>Calcular Probabilidades</h2>
 
     <div class="input-row">
-      <label>Mis cartas <span class="hint">(ej: 10,6)</span>
-        <input type="text" id="input-mis" placeholder="10,6" autocomplete="off">
-      </label>
+      <label>Mis cartas <span class="hint">(ej: 10,6)</span></label>
+      <input type="text" id="input-mis" placeholder="10,6" autocomplete="off">
     </div>
 
     <div class="input-row">
-      <label>Cartas de otros jugadores (incluye la del crupier) <span class="hint">(ej: 5,K,9,3,10)</span>
-        <input type="text" id="input-otros" placeholder="5,K" autocomplete="off">
-      </label>
+      <label>Cartas de otros <span class="hint">(crupier + mesa)</span></label>
+      <input type="text" id="input-otros" placeholder="5,K,10" autocomplete="off">
     </div>
 
-    <button id="btn-calc">Calcular Probabilidades</button>
-  </section>
+    <button id="btn-actualizar">Actualizar Zapato</button>
+    <span id="update-status"></span>
 
-  <!-- RESULTADOS -->
-  <section id="results-section" class="hidden">
-    <h2>Resultado</h2>
+    <p class="instrucciones">
+      Escribe tus cartas arriba. Al pedir, añade la carta nueva a <em>Mis cartas</em> (ej: 10,6,4).
+      La derecha se actualiza sola.
+    </p>
+  </aside>
 
-    <div class="mano-resumen">
-      <strong>Tu mano:</strong> <span id="res-cartas"></span>
-      → Total: <span id="res-total"></span>
-      <span id="res-suave" class="badge-suave hidden">suave</span>
-    </div>
+  <!-- ========== COLUMNA DERECHA: RESULTADOS ========== -->
+  <section class="panel-der">
 
-    <div class="resumen-numeros">
-      <div class="num-box rojo">
-        <span class="num-grande" id="res-pasarse">0%</span>
-        <span class="num-etiqueta">probabilidad de PASARTE</span>
-      </div>
-      <div class="num-box verde">
-        <span class="num-grande" id="res-no-pasarse">0%</span>
-        <span class="num-etiqueta">probabilidad de NO pasarte</span>
-      </div>
-      <div class="num-box dorado">
-        <span class="num-grande" id="res-carta-top">-</span>
-        <span class="num-etiqueta">carta mas probable</span>
+    <!-- Zapato compacto -->
+    <div id="shoe-section" class="hidden">
+      <div id="shoe-display" class="shoe-compact"></div>
+      <div class="shoe-total-wrap">
+        <span class="shoe-total-label">TOTAL</span>
+        <span id="shoe-total">312</span>
+        <span class="shoe-total-label">cartas</span>
       </div>
     </div>
 
-    <h3>Tabla de Probabilidades</h3>
-    <div class="tabla-scroll">
+    <!-- Resultados -->
+    <div id="results-section" class="hidden">
+      <div class="mano-resumen">
+        Tu mano: <strong id="res-cartas">-</strong> → Total <strong id="res-total">-</strong>
+        <span id="res-suave" class="badge-suave hidden">suave</span>
+      </div>
+
       <table id="tabla-probs">
         <thead>
           <tr>
-            <th>Carta</th>
-            <th>Probabilidad</th>
-            <th>Total nuevo</th>
-            <th>Resultado</th>
+            <th>Carta</th><th>Prob</th><th>Total nuevo</th><th>¿Pasa?</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+
+      <div class="resumen-fila">
+        <span class="caja-roja">Pasarte: <strong id="res-pasarse">-</strong></span>
+        <span class="caja-verde">A salvo: <strong id="res-no-pasarse">-</strong></span>
+        <span class="caja-dorada">Más probable: <strong id="res-carta-top">-</strong></span>
+      </div>
     </div>
 
-    <div class="actualizar-box">
-      <button id="btn-actualizar">Actualizar Zapato</button>
-      <span class="hint">(desc cuenta mis cartas + las de otros del zapato)</span>
-      <span id="update-status"></span>
-    </div>
   </section>
 
-  <!-- ZAPATO -->
-  <section id="shoe-section" class="hidden">
-    <h2>Cartas Restantes</h2>
-    <div id="shoe-display"></div>
-    <div class="shoe-total-wrap">
-      <span class="shoe-total-label">TOTAL</span>
-      <span id="shoe-total" class="shoe-total-num">312</span>
-      <span class="shoe-total-label">cartas</span>
-    </div>
-  </section>
-
-</main>
+</div>
 
 <script src="/static/script.js"></script>
 </body>

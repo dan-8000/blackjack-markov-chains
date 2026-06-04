@@ -15,9 +15,9 @@ blackjack-markov-chains/
 │   ├── markov.py       2 funciones: matriz_transicion + calcular_probabilidades
 │   └── app.py          3 endpoints FastAPI
 ├── frontend/
-│   ├── index.html      Interfaz: 1 dropdown + 2 inputs + tabla
-│   ├── style.css       Tabla coloreada + barras de zapato
-│   └── script.js       3 llamadas fetch
+│   ├── index.html      Layout 2 columnas (izq: inputs, der: resultados)
+│   ├── style.css       Grid layout, barras zapato compactas, responsive
+│   └── script.js       Auto-update con debounce 400ms, sin boton calcular
 ├── DOCUMENTACION.md
 ├── requirements.txt
 └── README.md
@@ -252,3 +252,44 @@ python3 -m venv .venv
 ```
 
 Abrir http://127.0.0.1:8000 en el navegador.
+
+---
+
+## Interfaz de Usuario
+
+### Layout (2 columnas, sin scroll)
+
+```
+┌────────────────────┬──────────────────────────────────┐
+│  IZQUIERDA (300px) │  DERECHA (resto)                  │
+│                    │                                   │
+│  Mazos: [6▼]       │  ZAPATO compacto (barras horiz)   │
+│  [Iniciar Sesion]  │  A ██ 24  2 ██ 24 ... 10 ████ 96 │
+│                    │                                   │
+│  Mis cartas        │  TU MANO: 10,6 → Total 16         │
+│  [10,6       ]     │                                   │
+│                    │  TABLA DE PROBABILIDADES           │
+│  Cartas otros      │  Carta │ Prob │ Total │ ¿Pasa?    │
+│  [5,K,10     ]     │   10   │ 30%  │   -   │   SÍ      │
+│                    │   A    │  8%  │  17   │   NO      │
+│  [Actualizar]      │   2    │  8%  │  18   │   NO      │
+│                    │  ...                               │
+│  Instrucciones     │                                   │
+│                    │  Pasarte: 61% │ A salvo: 39%       │
+│                    │  Más probable: 10                  │
+└────────────────────┴──────────────────────────────────┘
+```
+
+### Flujo de uso
+
+1. **Iniciar Sesion** → se crea el zapato, aparecen las barras
+2. Escribir `10,6` en **Mis cartas** → la derecha se actualiza sola a los 400ms
+3. Al pedir carta, el usuario **edita Mis cartas** a mano: `10,6,4` → recalcula solo
+4. **Actualizar Zapato** → descuenta Mis cartas + Cartas otros del zapato permanentemente
+5. Las barras compactas muestran cuantas cartas quedan de cada rango
+
+### Auto-update
+
+- Los inputs `oninput` disparan un debounce de 400ms
+- Sin boton "Calcular": todo se recalcula al escribir
+- Sin recarga de pagina: todo via `fetch` + actualizacion DOM
