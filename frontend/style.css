@@ -149,19 +149,24 @@ tr.top td { font-weight: 700; }
 }
 #btn-toggle-matriz:hover { color: var(--accent); border-color: var(--accent); }
 
-.matriz-scroll { overflow: auto; max-height: 280px; }
-.matriz-tabla { border-collapse: collapse; font-size: 0.58rem; white-space: nowrap; }
+.matriz-leyenda {
+  font-size: 0.65rem; color: var(--text-dim); margin-bottom: 4px;
+}
+.matriz-scroll { overflow: auto; max-height: 320px; }
+.matriz-tabla { border-collapse: collapse; font-size: 0.6rem; white-space: nowrap; }
 .matriz-tabla th {
-  padding: 1px 3px; color: var(--text-dim);
+  padding: 1px 4px; color: var(--text-dim);
   font-weight: 400; text-align: center; position: sticky; top: 0;
   background: var(--surface); z-index: 1;
 }
-.matriz-tabla td { padding: 1px 3px; text-align: center; min-width: 20px; }
+.matriz-tabla td { padding: 2px 4px; text-align: center; min-width: 24px; }
 .matriz-label {
   font-weight: 700; color: var(--text-dim); position: sticky; left: 0;
   background: var(--surface);
 }
-.matriz-celda { border-radius: 2px; color: var(--text-dim); }
+.matriz-celda {
+  border-radius: 2px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 700px) {

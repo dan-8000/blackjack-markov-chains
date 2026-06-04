@@ -178,10 +178,14 @@ function mostrarMatriz(matriz) {
   const contenedor = document.getElementById("matriz-display");
   contenedor.innerHTML = "";
 
+  const leyenda = document.createElement("p");
+  leyenda.className = "matriz-leyenda";
+  leyenda.textContent = "Filas = tu total actual  |  Columnas = total al que llegas  |  Valores en %";
+  contenedor.appendChild(leyenda);
+
   const tabla = document.createElement("table");
   tabla.className = "matriz-tabla";
 
-  // Encabezado
   const thead = document.createElement("thead");
   let filaEnc = "<tr><th></th>";
   for (let j = 4; j <= 21; j++) filaEnc += `<th>${j}</th>`;
@@ -189,7 +193,6 @@ function mostrarMatriz(matriz) {
   thead.innerHTML = filaEnc;
   tabla.appendChild(thead);
 
-  // Cuerpo
   const tbody = document.createElement("tbody");
   const maxVal = matriz.flat().reduce((a, b) => Math.max(a, b), 0.001);
 
@@ -201,8 +204,10 @@ function mostrarMatriz(matriz) {
     for (let j = 0; j < 19; j++) {
       const val = matriz[i][j];
       const td = document.createElement("td");
-      td.textContent = val > 0 ? (val * 100).toFixed(0) : "";
+      const pct = (val * 100);
+      td.textContent = val > 0.001 ? pct.toFixed(1) : "";
       td.className = "matriz-celda";
+      td.title = val > 0.001 ? `Total ${label} → Total ${j<18 ? j+4 : 'BUST'}: ${pct.toFixed(2)}%` : "";
       const intensidad = val / maxVal;
       if (val > 0) {
         td.style.background = `rgba(79, 195, 247, ${intensidad.toFixed(2)})`;
