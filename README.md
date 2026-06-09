@@ -1,30 +1,33 @@
 # blackjack-markov-chains
 
-Proyecto final de Lógica y Representación 3 — Asistente de Blackjack con Cadenas de Markov.
+Proyecto final de Lógica y Representación III — Universidad de Antioquia.
+
+**Autores:** Daniel Salas, Kevin Pantoja, Sebastián Cardona
+**Profesor:** Gabriel Darío Uribe Guerra
 
 ---
 
 ## Descripción
 
-Asistente de Blackjack donde toda la lógica de probabilidades se basa en **Cadenas de Markov**. Las cartas se ingresan manualmente y el número de mazos afecta únicamente las probabilidades de transición del modelo de Markov (composición del zapato). El sistema recalcula dinámicamente las probabilidades en función de las cartas que ya salieron y recomienda la jugada óptima con desglose de valor esperado por acción.
+Asistente de Blackjack basado en **Cadenas de Markov**. El sistema calcula en tiempo real la probabilidad de obtener cada posible carta en la siguiente jugada, usando una matriz de transición de 19×19 que se recalcula dinámicamente según las cartas que quedan en el zapato. A diferencia de las tablas de estrategia básica, las probabilidades cambian cada vez que una carta sale.
 
 ---
 
-## Estructura simplificada
+## Estructura
 
 ```
 blackjack-markov-chains/
-├── backend/                  # Toda la lógica en Python
-│   ├── __init__.py
-│   ├── models.py             # Carta, Mano, Zapato, Reglas
-│   ├── markov.py             # Cadena de Markov: estados, transiciones, solver
-│   └── app.py                # Endpoints FastAPI
-├── frontend/                 # Toda la parte visual
-│   ├── index.html            # Interfaz web
-│   ├── style.css             # Estilos
-│   └── script.js             # Lógica del frontend
-├── tests/
-│   └── test_core.py          # Tests unitarios
+├── backend/
+│   ├── carta.py          # Constantes y funciones de conversión de cartas
+│   ├── zapato.py          # Clase Zapato con numpy (conteo de cartas restantes)
+│   ├── markov.py          # Matriz de transición 19×19 + cálculo de probabilidades
+│   └── app.py             # FastAPI: 3 endpoints (configurar, probabilidades, actualizar)
+├── frontend/
+│   ├── index.html         # Layout 2 columnas, sin scroll
+│   ├── style.css          # Grid responsive, barras compactas, matriz de Markov
+│   └── script.js          # Auto-update con debounce 400ms, sin botón calcular
+├── DOCUMENTACION.md       # Documentación detallada con diagrama de clases
+├── PRESENTACION.md        # Guion de diapositivas para la presentación
 ├── requirements.txt
 └── README.md
 ```
@@ -33,63 +36,30 @@ blackjack-markov-chains/
 
 ## Flujo de uso
 
-1. **Configurar reglas** — seleccionar número de mazos y reglas desde dropdowns
-2. **Ingresar cartas manualmente** — escribir las cartas del jugador y la visible del crupier (ej: `10,A` para 10 y As)
-3. **Calcular jugada** — el sistema corre la cadena de Markov con la composición actual del zapato y devuelve:
-   - Valor esperado de cada acción (HIT, STAND, DOUBLE, SPLIT, SURRENDER)
-   - Acción recomendada (mayor EV)
-   - Desglose de probabilidades de cada desenlace
-4. **Registrar resultado** — se ingresan las cartas que salieron, el zapato se actualiza y se pasa a la siguiente mano
+1. **Iniciar Sesión** — seleccionar número de mazos, se crea el zapato
+2. **Escribir cartas** — Mis cartas (ej: `10,6`) + Cartas de otros (`5,K,10`). La tabla de probabilidades se actualiza sola a los 400ms
+3. **Pedir carta** — se edita Mis cartas a mano (ej: `10,6,4`), recalcula automáticamente
+4. **Actualizar Zapato** — descuenta permanentemente todas las cartas jugadas del zapato
 
 ---
 
-## Modelo de Markov
+## Cómo ejecutar
 
-### Estados
-
-`(player_total, is_soft, dealer_card, can_double, can_split, can_surrender)`
-
-### Acciones
-
-HIT, STAND, DOUBLE, SPLIT, SURRENDER (condicionadas a las flags del estado).
-
-### Transiciones
-
-La probabilidad de cada transición se calcula a partir de la composición **actual** del zapato (cartas no jugadas). Para HIT:
-
-```
-P(total_nuevo | total_actual, zapato) = count(rango_necesario) / total_cartas_restantes
+```bash
+git clone https://github.com/dan-8000/blackjack-markov-chains.git
+cd blackjack-markov-chains
+git checkout develop
+python3 -m venv .venv
+.venv/bin/pip install fastapi uvicorn numpy
+.venv/bin/uvicorn backend.app:aplicacion --host 127.0.0.1 --port 8000
 ```
 
-Para STAND se ejecuta el sub-MDP del crupier, que juega su política fija. El EV de cada acción es la suma ponderada de recompensas terminales.
-
----
-
-## Reglas configurables (dropdowns)
-
-| Parámetro | Opciones |
-|---|---|
-| N° de mazos | 1, 2, 4, 6, 8 |
-| Crupier soft 17 | Stand (S17), Hit (H17) |
-| Doblar | Any 2 cards, 9/10/11 only, 10/11 only |
-| Doblar tras split (DAS) | Sí, No |
-| Resplit | 1, 2, 3, 4 manos máx |
-| Rendición | Sin rendición, Tardía |
-| Pago blackjack | 3:2, 6:5 |
+Abrir http://127.0.0.1:8000
 
 ---
 
 ## Dependencias
 
-```
-fastapi
-uvicorn
-```
-
----
-
-## Nota de diseño
-
-- El número de mazos **solo** afecta la composición inicial del zapato (`models.py`) y por tanto las probabilidades de transición del modelo de Markov (`markov.py`). No se modelan reglas adicionales ligadas al número de mazos.
-- Las cartas se ingresan de forma manual (texto), sin selector gráfico complejo.
-- Backend y frontend están separados en carpetas independientes para mantener el proyecto simple y trabajable.
+- FastAPI
+- Uvicorn
+- NumPy

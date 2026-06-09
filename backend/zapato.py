@@ -13,9 +13,7 @@ class Zapato:
 
     def __init__(self, cantidad_mazos: int):
         # 1 mazo: 4 Ases, 4 de cada numero (2-9), 16 dieces (10+J+Q+K)
-        self.conteo = np.array(
-            [4] + [4] * 8 + [16], dtype=np.float64
-        ) * cantidad_mazos
+        self.conteo = np.array([4] + [4] * 8 + [16], dtype=np.float64) * cantidad_mazos
 
     def total(self) -> int:
         """Total de cartas restantes en el zapato."""

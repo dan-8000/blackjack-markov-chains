@@ -1,6 +1,8 @@
 # Documentacion — Blackjack con Cadenas de Markov
 
-Proyecto final de Logica y Representacion 3.
+Proyecto final de Logica y Representacion III — Universidad de Antioquia.
+
+**Autores:** Daniel Salas, Kevin Pantoja, Sebastian Cardona
 
 ---
 
@@ -293,3 +295,12 @@ Abrir http://127.0.0.1:8000 en el navegador.
 - Los inputs `oninput` disparan un debounce de 400ms
 - Sin boton "Calcular": todo se recalcula al escribir
 - Sin recarga de pagina: todo via `fetch` + actualizacion DOM
+
+### Matriz de Markov desplegable
+
+- Boton "Ver matriz de Markov ▼" debajo de los resultados
+- Muestra la matriz 19x19 completa como mapa de calor
+- Filas = total actual, Columnas = total destino
+- Celdas coloreadas por intensidad (azul mas intenso = mayor probabilidad)
+- Tooltip al pasar el raton con la transicion exacta
+- Leyenda: valores en porcentaje con un decimal
